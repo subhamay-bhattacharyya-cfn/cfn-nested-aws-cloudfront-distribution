@@ -28,13 +28,14 @@ Parameters:
 
   OriginBucketName:
     Type: String
-    Description: "Name of the existing S3 bucket used as the CloudFront origin"
-    MinLength: 3
+    Default: ""
+    Description: "Name of the existing S3 bucket used as the CloudFront origin (ignored when CiSuffix is set, because a bucket is created instead)"
     MaxLength: 63
 
   OriginBucketRegion:
     Type: String
-    Description: "AWS region where the existing S3 origin bucket is located"
+    Default: ""
+    Description: "AWS region where the existing S3 origin bucket is located (ignored when CiSuffix is set)"
 
   DefaultRootObject:
     Type: String
@@ -59,6 +60,21 @@ Conditions:
   HasCiSuffix: !Not [!Equals [!Ref CiSuffix, '']]
 
 Resources:
+  CiOriginBucket:
+    Type: AWS::S3::Bucket
+    Condition: HasCiSuffix
+    Properties:
+      BucketName: !Sub '${ProjectName}-cfn-ci-${AWS::AccountId}-${Environment}-${AWS::Region}-${CiSuffix}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      WebsiteConfiguration:
+        IndexDocument: !Ref DefaultRootObject
+
   OriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -88,7 +104,11 @@ Resources:
         PriceClass: !Ref PriceClass
         Origins:
           - Id: S3Origin
-            DomainName: !Sub '${OriginBucketName}.s3.${OriginBucketRegion}.amazonaws.com'
+            # REST endpoint, not the website endpoint: OAC does not work with website endpoints
+            DomainName: !If
+              - HasCiSuffix
+              - !GetAtt CiOriginBucket.RegionalDomainName
+              - !Sub '${OriginBucketName}.s3.${OriginBucketRegion}.amazonaws.com'
             OriginAccessControlId: !GetAtt OriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
@@ -116,7 +136,10 @@ Resources:
   OriginBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref OriginBucketName
+      Bucket: !If
+        - HasCiSuffix
+        - !Ref CiOriginBucket
+        - !Ref OriginBucketName
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -125,7 +148,10 @@ Resources:
             Principal:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
-            Resource: !Sub 'arn:${AWS::Partition}:s3:::${OriginBucketName}/*'
+            Resource: !If
+              - HasCiSuffix
+              - !Sub 'arn:${AWS::Partition}:s3:::${CiOriginBucket}/*'
+              - !Sub 'arn:${AWS::Partition}:s3:::${OriginBucketName}/*'
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
