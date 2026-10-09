@@ -4,50 +4,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a **CloudFormation template repository** that provides reusable nested stack templates for deploying S3 buckets with security best practices. Templates follow the nested stack pattern and are designed to be referenced by parent CloudFormation stacks.
+This is a **CloudFormation template repository** that provides a reusable nested stack template for serving an existing S3 bucket through a CloudFront distribution using Origin Access Control (OAC). The template is designed to be referenced by parent CloudFormation stacks.
 
 **Key characteristics:**
 
-- Nested CloudFormation templates (referenced via `TemplateURL`)
-- Parameterized bucket naming with account ID, environment, and region
-- S3 security defaults: versioning enabled, public access blocked
-- Optional S3 bucket policy enforcement (encryption, secure transport)
+- Nested CloudFormation template (referenced via `TemplateURL`)
+- CloudFront distribution in front of an existing S3 origin bucket (the bucket is not created by this template)
+- Origin Access Control (sigv4) so the bucket stays private; the bucket policy grants `s3:GetObject` only to this distribution
+- Distribution name and `Name` tag built from project, base name, environment, and region
+- Website is served only through CloudFront; no direct S3 website endpoint is exposed
 - Automated semantic versioning and releases
 - AWS OIDC authentication for CI/CD deployments
 
 ## Project Structure
 
 ```text
-templates/
-├── s3-bucket.yaml                # Nested template: S3 bucket creation
-└── s3-bucket-policy.yaml         # Nested template: S3 bucket policy
+cloudformation/
+├── template.yaml                    # Nested template: CloudFront distribution + OAC + origin bucket policy
+├── parameters.json                  # Parameter values for CI deployments
+└── stack-config.json                # Stack name, template file, and parameter file used by CI
 
-parameters/
-├── dev.json                       # Parameters for development environment
-├── staging.json                   # Parameters for staging environment
-├── prod.json                      # Parameters for production environment
-├── policy-dev.json                # Bucket policy parameters (development)
-├── policy-staging.json            # Bucket policy parameters (staging)
-└── policy-prod.json               # Bucket policy parameters (production)
+.env/
+└── environments.yaml                # Environment-to-GitHub-environment mapping and regions
 
 .github/workflows/
-├── ci.yaml                        # Validates, deploys, and cleans up templates
-├── release.yaml                   # Semantic release on push to main
-└── create-branch.yaml             # Auto-create feature branches from issues
+├── ci.yaml                          # Loads stack config and calls the reusable CI build workflow
+├── release.yaml                     # Semantic release on push to main
+├── create-branch.yaml               # Auto-create feature branches from issues
+├── claude.yaml                      # Claude Code workflow
+├── claude-code-review.yaml          # Claude Code review workflow
+├── notify.yaml                      # Notification workflow
+└── setup-environments.yaml          # GitHub environment setup
 
 scripts/plugins/
-├── release.config.js              # Semantic-release configuration
-└── (other release plugins)        # Custom commit analysis, notes generation
+├── release.config.js                # Semantic-release configuration
+└── (other release plugins)          # Commit analysis, notes generation, publish, verification
 
 .claude/
-├── settings.json                  # Claude Code workspace settings
-└── settings.local.json            # Local overrides
+└── .skills/                         # Project skills
 
 .devcontainer/
-└── devcontainer.json              # Dev container setup (Node.js 20)
+└── devcontainer.json                # Dev container setup (Node.js 20)
 
-package.json                       # Dependencies: semantic-release, commitizen
-README.md                          # Template documentation and usage examples
+package.json                         # Dependencies: semantic-release, commitizen
+README.md                            # Template documentation and usage examples
 ```
 
 ## Development Commands
@@ -76,95 +76,84 @@ Select `feat`, `fix`, or `chore` type. Only `feat` and `fix` trigger releases.
 
 ### Nested Stack Pattern
 
-This repo provides **nested stack templates** — templates that are referenced from parent/root CloudFormation stacks via `TemplateURL`. The templates are self-contained and export outputs for cross-stack references.
+This repo provides a **nested stack template** — referenced from a parent/root CloudFormation stack via `TemplateURL`. The template is self-contained and exposes outputs for the parent stack.
 
 - **Parent stack** calls: `AWS::CloudFormation::Stack` with `TemplateURL` pointing to S3
-- **Nested templates** output values via `Outputs` section with `Export`
+- **Nested template** exposes values via the `Outputs` section
 - Parent retrieves outputs via `!GetAtt NestedStack.Outputs.OutputKey`
 
-### Bucket Naming Convention
+### Naming Convention
 
-Bucket names follow a deterministic pattern driven by parameters:
+The distribution `Name` tag and the OAC name are derived from parameters:
 
 ```bash
-{ProjectName}-{BucketBaseName}-{AccountId}-{Environment}-{Region}[-{CiSuffix}]
+{ProjectName}-{DistributionBaseName}-{environment}-{AWS::Region}
 ```
 
-Example: `myproject-cfn-bucket-123456789012-devl-us-east-1`
+Example: `myproject-cdn-devl-us-east-1`
 
-This ensures:
+The OAC name appends `-oac` to this pattern.
 
-- Uniqueness across AWS accounts and regions
-- Environment isolation
-- Consistent naming for infrastructure automation
+### Distribution Comment
 
-### Parameter-Driven Configuration
-
-Both templates accept parameters to support:
-
-- **Standalone mode**: Direct bucket name provided
-- **Integrated mode**: Bucket name constructed from project/environment parameters
-
-The `s3-bucket-policy.yaml` template checks if `BucketName` is provided; if not, it constructs the name using the same parameters as the bucket template.
+CloudFront has no name or description field on the distribution itself. The `Description` parameter is passed as the distribution `Comment`, which the console shows as the description. The default is an empty string.
 
 ## Key Files to Understand
 
-### `templates/s3-bucket.yaml`
+### `cloudformation/template.yaml`
 
-**Purpose:** Creates an S3 bucket with security defaults
+**Purpose:** Creates a CloudFront distribution that fronts an existing S3 bucket, with OAC and a bucket policy that lets only that distribution read objects.
 
 **Key inputs:**
 
-- `ProjectName` (required): Project prefix
-- `BucketBaseName` (default: `cfn-bucket`): Base name component
-- `environment`: Environment label (devl, stag, prod)
-- `CiSuffix`: Optional suffix for CI/CD unique deployments
+- `ProjectName` (required): Project prefix, lowercase letters, numbers, and hyphens, max 20 characters
+- `DistributionBaseName` (default: `cdn`): Base name component
+- `environment` (default: `devl`): Environment label
+- `Description` (default: empty): Distribution comment shown in the console
+- `OriginBucketName` (required): Name of the existing S3 origin bucket
+- `OriginBucketRegion` (required): Region of the existing S3 origin bucket
+- `DefaultRootObject` (default: `index.html`): Object served at the root URL
+- `PriceClass` (default: `PriceClass_100`): `PriceClass_100`, `PriceClass_200`, or `PriceClass_All`
 
 **Key outputs:**
 
-- `S3BucketName`: Bucket name (exported for parent stack)
-- `S3BucketArn`: Bucket ARN
+- `DistributionId`: CloudFront distribution ID
+- `DistributionDomainName`: Domain name of the distribution; this is the address users should use
 
 **Features:**
 
-- Versioning enabled by default
-- Public access blocking enabled (all 4 options)
-- Conditional naming: different bucket name with/without CI suffix
+- Origin uses the S3 REST endpoint (`{bucket}.s3.{region}.amazonaws.com`) with OAC; do not switch it to the S3 website endpoint, because OAC does not work with website endpoints
+- HTTP/2 and HTTP/3, IPv6, redirect-to-HTTPS, compression enabled
+- Managed `CachingOptimized` cache policy, GET/HEAD only
+- Default CloudFront certificate (no custom domain)
+- Bucket policy statement `AllowCloudFrontServicePrincipalReadOnly` grants `s3:GetObject` to the distribution via `AWS:SourceArn`
 
-### `templates/s3-bucket-policy.yaml`
+**Gotchas:**
 
-**Purpose:** Applies an optional S3 bucket policy for encryption and transport security
+- If the origin bucket uses a customer managed KMS key (SSE-KMS), CloudFront also needs `kms:Decrypt` in that key's key policy, scoped to the distribution ARN. The bucket policy cannot grant this. Without it, requests return `AccessDenied`.
+- The bucket policy grants only `s3:GetObject`, so a missing object also returns `AccessDenied` rather than `NoSuchKey`.
+- The origin bucket is not managed by this template, but `OriginBucketPolicy` is an `AWS::S3::BucketPolicy`, which replaces the bucket's entire existing policy. Any other statements on the bucket will be removed on deploy.
 
-**Key inputs:** Same as bucket template, plus `BucketName` (standalone mode)
+### `cloudformation/stack-config.json` and `cloudformation/parameters.json`
 
-**Behavior:**
-
-- If `BucketName` provided (non-empty), use it directly
-- Otherwise, construct name from ProjectName/BucketBaseName/environment/CiSuffix
-- Enforces S3 encryption on PutObject
-- Enforces HTTPS-only transport
+`stack-config.json` names the stack, template file, and parameter file that CI deploys. `parameters.json` holds the parameter values for that deployment. Parameter keys are case-sensitive and must match the template exactly.
 
 ### `.github/workflows/ci.yaml`
 
 **Triggered on:**
 
-- Manual workflow_dispatch (anytime)
-- Pull requests (any branch)
-- Pushes to `feature/**` and `bug/**` branches
+- Manual `workflow_dispatch`
+- Push, pull request, and path-filter triggers are currently commented out
 
-**Path filter:** Only runs if changes to `templates/`, `parameters/`, or `.github/workflows/ci.yaml`
+**Process:**
 
-**Phases:**
-
-1. **Validation:** `aws cloudformation validate-template` on both templates
-2. **Deployment:** Creates CloudFormation stacks in CI environment
-3. **Cleanup:** Destroys stacks (policy stack first, then bucket) for ephemeral testing
+1. `load-config` job reads `cloudformation/stack-config.json` and writes the stack name, template file, and parameter file to the job outputs and step summary
+2. `ci-build` job calls the reusable workflow `subhamay-bhattacharyya-gha/cfn-ci-build-reusable-wf` with the `ci` GitHub environment and the stack name
 
 **Environment setup:**
 
-- Reads config from GitHub environment variables: `AWS_REGION`, `AWS_ACCOUNT_ID`, `OIDC_ROLE_NAME`, `CFN_TEMPLATES_S3_BUCKET`
-- Uses AWS OIDC for keyless authentication via `aws-actions/configure-aws-credentials`
-- Requires GitHub environment `ci` with OIDC trust configured
+- The reusable workflow expects GitHub environment `ci` with AWS OIDC trust configured
+- `.env/environments.yaml` maps `ci` and `devl` to the `AWS-CFN-TEMPLATES` GitHub environment and lists `us-east-1` as the region
 
 ### `.github/workflows/release.yaml`
 
@@ -190,38 +179,31 @@ The `s3-bucket-policy.yaml` template checks if `BucketName` is provided; if not,
 **Manual template validation:**
 
 ```bash
-aws cloudformation validate-template --template-body file://templates/s3-bucket.yaml
-aws cloudformation validate-template --template-body file://templates/s3-bucket-policy.yaml
+aws cloudformation validate-template --template-body file://cloudformation/template.yaml
 ```
 
 **Manual stack deployment:**
 
 ```bash
-# Deploy bucket to dev environment
 aws cloudformation deploy \
-  --template-file templates/s3-bucket.yaml \
-  --stack-name my-stack-dev \
-  --parameter-overrides file://parameters/dev.json \
-  --region us-east-1
-
-# Deploy policy after bucket is created
-aws cloudformation deploy \
-  --template-file templates/s3-bucket-policy.yaml \
-  --stack-name my-policy-dev \
-  --parameter-overrides file://parameters/policy-dev.json \
+  --template-file cloudformation/template.yaml \
+  --stack-name cfn-nested-aws-cloudfront-distribution-stack \
+  --parameter-overrides \
+    ProjectName=myproject \
+    OriginBucketName=my-origin-bucket \
+    OriginBucketRegion=us-east-1 \
+    environment=devl \
   --region us-east-1
 ```
 
-The CI workflow (ci.yaml) runs this full cycle automatically on PR, then cleans up.
+Then confirm the origin bucket has the default root object (for example `index.html`) and, if the bucket uses SSE-KMS, that the key policy allows `kms:Decrypt` for the distribution before testing the `DistributionDomainName` URL.
 
 ## AWS Credentials & Environment Variables
 
-**GitHub environment variables required in `ci` environment:**
+**GitHub environment `ci` requirements:**
 
-- `AWS_REGION`: CloudFormation deployment region
-- `AWS_ACCOUNT_ID`: AWS account to deploy into
-- `OIDC_ROLE_NAME`: IAM role name for OIDC trust (uses `arn:aws:iam::{ACCOUNT_ID}:role/{ROLE_NAME}`)
-- `CFN_TEMPLATES_S3_BUCKET`: S3 bucket where templates are stored
+- AWS OIDC trust for the role used by the reusable CI workflow
+- AWS region `us-east-1` (per `.env/environments.yaml`)
 
 **OIDC setup:** The CI workflow uses AWS OIDC for keyless auth. The GitHub OIDC provider must trust the specified role.
 
@@ -242,14 +224,13 @@ Commit types:
 
 Only commits to `main` trigger releases. Feature branches use this format but releases happen on merge to main.
 
-## When Modifying Templates
+## When Modifying the Template
 
-1. **Edit the template YAML** in `templates/`
-2. **Update parameter files** in `parameters/` if new parameters added
+1. **Edit `cloudformation/template.yaml`**
+2. **Update `cloudformation/parameters.json`** if parameters are added, renamed, or removed
 3. **Test locally** with `aws cloudformation validate-template`
-4. **Create a PR** with conventional commit message (e.g., `feat: add encryption key parameter`)
-5. **CI validates and deploys** to dev environment automatically
-6. **Merge to main** → release workflow creates version tag and GitHub release
+4. **Create a PR** with a conventional commit message (e.g., `feat: add Description parameter`)
+5. **Merge to main** → release workflow creates version tag and GitHub release
 
 ## Dev Container
 
@@ -263,4 +244,3 @@ Use via VS Code: `code --remote-container-url <repo-url>`
 ## Current Branch
 
 Main branch is the release branch. Feature work branches from here and merges back via PR. Branch naming follows: `{type}/CFN-{issue-number}-{slug}` (e.g., `feature/CFN-42-add-encryption`).
-

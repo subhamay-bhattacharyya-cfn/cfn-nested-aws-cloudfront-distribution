@@ -54,7 +54,7 @@ jobs:
   ci-build:
     name: CI Build
     needs: load-config
-    uses: subhamay-bhattacharyya-gha/cfn-ci-build-reusable-wf/.github/workflows/ci.yaml@v1.0.0
+    uses: subhamay-bhattacharyya-gha/cfn-ci-build-reusable-wf/.github/workflows/ci.yaml@main
     with:
       environment: ci
       stack-name: ${{ needs.load-config.outputs.stack-name }}

@@ -1,5 +1,5 @@
 {
-  "stackName": "github-repo-template-stack",
+  "stackName": "cfn-nested-aws-cloudfront-distribution-stack",
   "templateFile": "cloudformation/template.yaml",
   "parameterFile": "cloudformation/parameters.json"
 }

@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'Nested CloudFormation template to create a CloudFront distribution in front of an existing S3 origin bucket'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: "Project name used as the prefix for the distribution name"
+    MinLength: 1
+    MaxLength: 20
+    AllowedPattern: "^[a-z0-9-]+$"
+    ConstraintDescription: "Project name must be lowercase letters, numbers, and hyphens only"
+
+  DistributionBaseName:
+    Type: String
+    Default: cdn
+    Description: "Base name for the CloudFront distribution (project name, environment, and AWS region will be added)"
+
+  environment:
+    Type: String
+    Default: devl
+    Description: "Deployment environment for the CloudFront distribution"
+
+  Description:
+    Type: String
+    Default: ""
+    Description: "Free-text description for the CloudFront distribution, used as its comment (shown in the console)"
+
+  OriginBucketName:
+    Type: String
+    Description: "Name of the existing S3 bucket used as the CloudFront origin"
+    MinLength: 3
+    MaxLength: 63
+
+  OriginBucketRegion:
+    Type: String
+    Description: "AWS region where the existing S3 origin bucket is located"
+
+  DefaultRootObject:
+    Type: String
+    Default: index.html
+    Description: "Object returned when the root URL of the distribution is requested"
+
+  PriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Description: "CloudFront price class (edge location coverage)"
+
+Resources:
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}-oac'
+        Description: !Sub 'Origin access control for ${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        # CloudFront has no description field; the Description parameter is passed as the distribution comment
+        Comment: !Ref Description
+        DefaultRootObject: !Ref DefaultRootObject
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: !Ref PriceClass
+        Origins:
+          - Id: S3Origin
+            DomainName: !Sub '${OriginBucketName}.s3.${OriginBucketRegion}.amazonaws.com'
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          # Managed-CachingOptimized cache policy
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}'
+
+  OriginBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OriginBucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipalReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${OriginBucketName}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+Outputs:
+  DistributionId:
+    Description: "ID of the CloudFront distribution"
+    Value: !Ref CloudFrontDistribution
+
+  DistributionDomainName:
+    Description: "Domain name of the CloudFront distribution"
+    Value: !GetAtt CloudFrontDistribution.DomainName

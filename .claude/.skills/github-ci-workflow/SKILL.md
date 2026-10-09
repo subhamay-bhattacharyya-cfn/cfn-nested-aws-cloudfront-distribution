@@ -8,7 +8,7 @@ tags: [ci-cd, cloudformation, github-actions, aws, automation, deployment]
 
 # GitHub CI/CD Workflow Skill
 
-Complete guide to the CloudFormation Template Lifecycle CI/CD workflow for the cloudformation-template repository.
+Complete guide to the CloudFormation Template Lifecycle CI/CD workflow for the cfn-nested-aws-cloudfront-distribution repository.
 
 ## Overview
 
@@ -118,8 +118,8 @@ Change `DEPLOY_ENV` to deploy to different environments.
 ```
 
 **Examples:**
-- `cloudformation-template-bucket-ci`
-- `cloudformation-template-policy-ci`
+- `cfn-nested-aws-cloudfront-distribution-bucket-ci`
+- `cfn-nested-aws-cloudfront-distribution-policy-ci`
 
 ## Useful AWS CLI Commands
 
@@ -128,13 +128,13 @@ Change `DEPLOY_ENV` to deploy to different environments.
 aws cloudformation list-stacks --region us-east-1
 
 # Describe specific stack
-aws cloudformation describe-stacks --stack-name cloudformation-template-bucket-ci --region us-east-1
+aws cloudformation describe-stacks --stack-name cfn-nested-aws-cloudfront-distribution-bucket-ci --region us-east-1
 
 # View stack events
-aws cloudformation describe-stack-events --stack-name cloudformation-template-bucket-ci
+aws cloudformation describe-stack-events --stack-name cfn-nested-aws-cloudfront-distribution-bucket-ci
 
 # Get stack outputs
-aws cloudformation describe-stacks --stack-name cloudformation-template-bucket-ci \
+aws cloudformation describe-stacks --stack-name cfn-nested-aws-cloudfront-distribution-bucket-ci \
   --query 'Stacks[0].Outputs' --region us-east-1
 
 # Validate template locally

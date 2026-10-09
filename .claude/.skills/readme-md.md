@@ -23,13 +23,13 @@ The README includes the following badges at the top:
 
 ## Badge URLs
 
-All badges use shields.io endpoints with the repository: `subhamay-bhattacharyya-cfn/cloudformation-template`
+All badges use shields.io endpoints with the repository: `subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution`
 
 ### Gist Endpoint
 
 The custom status badge uses a gist endpoint:
 ```
-https://gist.githubusercontent.com/bsubhamay/0d518b3ce02fae859c9a3c4d3bb6b94d/raw/cloudformation-template.json
+https://gist.githubusercontent.com/bsubhamay/0d518b3ce02fae859c9a3c4d3bb6b94d/raw/cfn-nested-aws-cloudfront-distribution.json
 ```
 
 **Gist Link:** https://gist.github.com/bsubhamay/0d518b3ce02fae859c9a3c4d3bb6b94d
@@ -52,7 +52,7 @@ The JSON format for the status endpoint is:
 
 To change the status badge appearance, update the gist at:
 - **Gist ID**: `0d518b3ce02fae859c9a3c4d3bb6b94d`
-- **File**: `cloudformation-template.json`
+- **File**: `cfn-nested-aws-cloudfront-distribution.json`
 - **URL**: https://gist.github.com/bsubhamay/0d518b3ce02fae859c9a3c4d3bb6b94d
 
 Supported colors: `green` (28a745), `yellow` (dfb317), `red` (e05d44), `blue` (007ec6)
@@ -61,20 +61,20 @@ Supported colors: `green` (28a745), `yellow` (dfb317), `red` (e05d44), `blue` (0
 
 All badges should display correctly once pushed to main. To verify:
 1. Check the README.md in the GitHub web interface
-2. Ensure all badge URLs use the correct repository name (`subhamay-bhattacharyya-cfn/cloudformation-template`)
+2. Ensure all badge URLs use the correct repository name (`subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution`)
 3. Verify the gist endpoint is accessible and returns valid JSON
 
 ### Add New Badge
 
 To add a new badge:
 1. Identify the shields.io endpoint for the badge
-2. Update the repository reference to `subhamay-bhattacharyya-cfn/cloudformation-template`
+2. Update the repository reference to `subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution`
 3. Add to the README badges line at the top
 4. Ensure proper spacing with `&nbsp;` between badges
 
 ## Repository Reference
 
-- **Repository**: `subhamay-bhattacharyya-cfn/cloudformation-template`
+- **Repository**: `subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution`
 - **Organization**: subhamay-bhattacharyya-cfn
 - **Type**: CloudFormation template repository
 

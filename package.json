@@ -1,5 +1,5 @@
 {
-  "name": "cloudformation-template",
+  "name": "cfn-nested-aws-cloudfront-distribution",
   "version": "0.0.0",
   "description": "CloudFormation template repository with semantic versioning and automated release management.",
   "main": "index.js",
@@ -26,13 +26,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template.git"
+    "url": "git+https://github.com/subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution.git"
   },
   "author": "Subhamay Bhattacharyya",
   "license": "MIT",
   "keywords": [],
   "bugs": {
-    "url": "https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template/issues"
+    "url": "https://github.com/subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution/issues"
   },
-  "homepage": "https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template#readme"
+  "homepage": "https://github.com/subhamay-bhattacharyya-cfn/cfn-nested-aws-cloudfront-distribution#readme"
 }
