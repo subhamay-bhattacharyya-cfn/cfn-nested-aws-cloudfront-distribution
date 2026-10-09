@@ -1,0 +1,38 @@
+{
+  "name": "cloudformation-template",
+  "version": "0.0.0",
+  "description": "CloudFormation template repository with semantic versioning and automated release management.",
+  "main": "index.js",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "commitizen": "^4.3.2",
+    "cz-conventional-changelog": "^3.3.0",
+    "semantic-release": "^25.0.9"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "release": {
+    "extends": "./scripts/plugins/release.config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template.git"
+  },
+  "author": "Subhamay Bhattacharyya",
+  "license": "MIT",
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template/issues"
+  },
+  "homepage": "https://github.com/subhamay-bhattacharyya-cfn/cloudformation-template#readme"
+}

@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'Nested CloudFormation template to create an S3 bucket with versioning and public access blocking'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: "Project name to use as a bucket prefix"
+    MinLength: 1
+    MaxLength: 20
+    AllowedPattern: "^[a-z0-9-]+$"
+    ConstraintDescription: "Project name must be lowercase letters, numbers, and hyphens only"
+
+  BucketBaseName:
+    Type: String
+    Default: cfn-bucket
+    Description: Base name for the S3 bucket (account ID, environment, and region will be appended)
+
+  environment:
+    Type: String
+    Default: devl
+    Description: "Deployment environment for the S3 bucket"
+
+  CiSuffix:
+    Type: String
+    Default: ""
+    Description: "Optional CI prefix to append to the bucket name"
+
+Conditions:
+  HasCiSuffix: !Not [!Equals [!Ref CiSuffix, ""]]
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !If
+        - HasCiSuffix
+        - !Sub '${ProjectName}-${BucketBaseName}-${AWS::AccountId}-${environment}-${AWS::Region}-${CiSuffix}'
+        - !Sub '${ProjectName}-${BucketBaseName}-${AWS::AccountId}-${environment}-${AWS::Region}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  S3BucketName:
+    Description: "Name of the S3 bucket"
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub "${AWS::StackName}-BucketName"
+
+  S3BucketArn:
+    Description: "ARN of the S3 bucket"
+    Value: !GetAtt S3Bucket.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-BucketArn"

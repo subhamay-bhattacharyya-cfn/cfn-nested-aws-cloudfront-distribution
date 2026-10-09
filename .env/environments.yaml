@@ -1,0 +1,5 @@
+environments:
+  ci: AWS-CFN-TEMPLATES
+  devl: AWS-CFN-TEMPLATES
+regions:
+  - us-east-1

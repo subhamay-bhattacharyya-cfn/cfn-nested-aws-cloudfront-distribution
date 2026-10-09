@@ -1,0 +1,116 @@
+name: CI Build Workflow
+description: CI Build Workflow for CloudFormation VPC Subnet Stack run by {{ github.actor }}
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - feature/**
+  #     - bug/**
+  #   paths:
+  #     - 'cloudformation/**'
+  #     - .github/workflows/ci.yaml
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - 'cloudformation/**'
+
+permissions:
+  actions: write
+  contents: write
+  id-token: write
+
+jobs:
+  load-config:
+    name: Load Stack Configuration
+    runs-on: ubuntu-26.04
+    outputs:
+      stack-name: ${{ steps.config.outputs.stack-name }}
+      template-file: ${{ steps.config.outputs.template-file }}
+      parameter-file: ${{ steps.config.outputs.parameter-file }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: config
+        run: |
+          CONFIG=$(cat cloudformation/stack-config.json)
+          STACK_NAME=$(echo "$CONFIG" | jq -r '.stackName')
+          TEMPLATE_FILE=$(echo "$CONFIG" | jq -r '.templateFile')
+          PARAMETER_FILE=$(echo "$CONFIG" | jq -r '.parameterFile')
+          echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "template-file=$TEMPLATE_FILE" >> $GITHUB_OUTPUT
+          echo "parameter-file=$PARAMETER_FILE" >> $GITHUB_OUTPUT
+
+          # Write to GitHub step summary
+          {
+            echo "## Stack Configuration"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Stack Name | \`$STACK_NAME\` |"
+            echo "| Template File | \`$TEMPLATE_FILE\` |"
+            echo "| Parameter File | \`$PARAMETER_FILE\` |"
+          } >> $GITHUB_STEP_SUMMARY
+
+  ci-build:
+    name: CI Build
+    needs: load-config
+    uses: subhamay-bhattacharyya-gha/cfn-ci-build-reusable-wf/.github/workflows/ci.yaml@v1.0.0
+    with:
+      environment: ci
+      stack-name: ${{ needs.load-config.outputs.stack-name }}
+      template-file: ${{ needs.load-config.outputs.template-file }}
+      parameters-file: ${{ needs.load-config.outputs.parameter-file }}
+
+  # ============================================================================
+  # Generate Change Log
+  # ============================================================================
+
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-26.04
+    needs: ci-build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        id: git-cliff
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config credential.helper store
+          echo "https://github-actions[bot]:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md [skip ci]"
+          git pull --rebase
+          git push
+
+  # ============================================================================
+  # Release Creation
+  # ============================================================================
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-26.04
+    needs: ci-build
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Create Release
+        uses: subhamay-bhattacharyya-gha/create-release-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

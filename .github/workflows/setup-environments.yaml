@@ -1,0 +1,18 @@
+name: Setup AWS Environments
+run-name: Setup AWS Environments in ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  actions: write
+  deployments: write
+
+jobs:
+  setup:
+    name: Setup AWS Environments
+    uses: subhamay-bhattacharyya-gha/setup-aws-environments-wf/.github/workflows/setup-environments.yaml@v1.4.0
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

@@ -1,0 +1,5 @@
+{
+  "stackName": "github-repo-template-stack",
+  "templateFile": "cloudformation/template.yaml",
+  "parameterFile": "cloudformation/parameters.json"
+}
