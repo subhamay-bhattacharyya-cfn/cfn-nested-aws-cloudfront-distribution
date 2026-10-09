@@ -3,17 +3,17 @@ description: CI Build Workflow for CloudFormation VPC Subnet Stack run by {{ git
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - feature/**
-  #     - bug/**
-  #   paths:
-  #     - 'cloudformation/**'
-  #     - .github/workflows/ci.yaml
-  # pull_request:
-  #   branches: [main]
-  #   paths:
-  #     - 'cloudformation/**'
+  push:
+    branches:
+      - feature/**
+      - bug/**
+    paths:
+      - 'cloudformation/**'
+      - .github/workflows/ci.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cloudformation/**'
 
 permissions:
   actions: write
