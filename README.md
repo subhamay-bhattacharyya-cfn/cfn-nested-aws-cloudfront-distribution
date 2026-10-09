@@ -43,7 +43,8 @@ This is a **nested stack template** designed to be invoked from a parent/root Cl
 | ----------- | ------ | --------- | ------------- |
 | `ProjectName` | String | — | Project name used as the prefix for the distribution name (required; lowercase letters, numbers, hyphens; max 20 characters) |
 | `DistributionBaseName` | String | `cdn` | Base name for the distribution |
-| `environment` | String | `devl` | Deployment environment |
+| `Environment` | String | `devl` | Deployment environment |
+| `CiSuffix` | String | `""` | Optional CI suffix for unique CI/CD deployments |
 | `Description` | String | `""` | Free-text comment shown as the distribution description in the console |
 | `OriginBucketName` | String | — | Name of the existing S3 bucket used as the origin (required) |
 | `OriginBucketRegion` | String | — | Region of the existing S3 origin bucket (required) |
@@ -77,7 +78,7 @@ CloudFrontNestedStack:
     Parameters:
       ProjectName: myproject
       DistributionBaseName: cdn
-      environment: !Ref Environment
+      Environment: !Ref Environment
       Description: Marketing site distribution
       OriginBucketName: !Ref OriginBucketName
       OriginBucketRegion: us-east-1
@@ -100,7 +101,7 @@ aws cloudformation deploy \
     ProjectName=myproject \
     OriginBucketName=my-origin-bucket \
     OriginBucketRegion=us-east-1 \
-    environment=devl \
+    Environment=devl \
   --region us-east-1
 ```
 
@@ -118,7 +119,7 @@ aws cloudformation describe-stacks \
 The distribution `Name` tag and the OAC name are generated from the parameters:
 
 ```bash
-{ProjectName}-{DistributionBaseName}-{environment}-{AWS::Region}
+{ProjectName}-{DistributionBaseName}-{Environment}-{AWS::Region}
 ```
 
 Example: `myproject-cdn-devl-us-east-1`

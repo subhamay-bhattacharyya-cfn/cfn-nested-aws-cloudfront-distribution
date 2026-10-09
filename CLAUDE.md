@@ -87,7 +87,7 @@ This repo provides a **nested stack template** — referenced from a parent/root
 The distribution `Name` tag and the OAC name are derived from parameters:
 
 ```bash
-{ProjectName}-{DistributionBaseName}-{environment}-{AWS::Region}
+{ProjectName}-{DistributionBaseName}-{Environment}-{AWS::Region}
 ```
 
 Example: `myproject-cdn-devl-us-east-1`
@@ -108,7 +108,8 @@ CloudFront has no name or description field on the distribution itself. The `Des
 
 - `ProjectName` (required): Project prefix, lowercase letters, numbers, and hyphens, max 20 characters
 - `DistributionBaseName` (default: `cdn`): Base name component
-- `environment` (default: `devl`): Environment label
+- `Environment` (default: `devl`): Environment label
+- `CiSuffix` (default: empty): Optional suffix for unique CI/CD deployments
 - `Description` (default: empty): Distribution comment shown in the console
 - `OriginBucketName` (required): Name of the existing S3 origin bucket
 - `OriginBucketRegion` (required): Region of the existing S3 origin bucket
@@ -192,7 +193,7 @@ aws cloudformation deploy \
     ProjectName=myproject \
     OriginBucketName=my-origin-bucket \
     OriginBucketRegion=us-east-1 \
-    environment=devl \
+    Environment=devl \
   --region us-east-1
 ```
 

@@ -16,7 +16,7 @@ Parameters:
     Default: cdn
     Description: "Base name for the CloudFront distribution (project name, environment, and AWS region will be added)"
 
-  environment:
+  Environment:
     Type: String
     Default: devl
     Description: "Deployment environment for the CloudFront distribution"
@@ -50,13 +50,27 @@ Parameters:
       - PriceClass_All
     Description: "CloudFront price class (edge location coverage)"
 
+  CiSuffix:
+    Type: String
+    Default: ""
+    Description: "Optional CI suffix for unique CI/CD deployments"
+
+Conditions:
+  HasCiSuffix: !Not [!Equals [!Ref CiSuffix, '']]
+
 Resources:
   OriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: !Sub '${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}-oac'
-        Description: !Sub 'Origin access control for ${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}'
+        Name: !If
+          - HasCiSuffix
+          - !Sub '${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}-${CiSuffix}-oac'
+          - !Sub '${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}-oac'
+        Description: !If
+          - HasCiSuffix
+          - !Sub 'Origin access control for ${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}-${CiSuffix}'
+          - !Sub 'Origin access control for ${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}'
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -94,7 +108,10 @@ Resources:
           CloudFrontDefaultCertificate: true
       Tags:
         - Key: Name
-          Value: !Sub '${ProjectName}-${DistributionBaseName}-${environment}-${AWS::Region}'
+          Value: !If
+            - HasCiSuffix
+            - !Sub '${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}-${CiSuffix}'
+            - !Sub '${ProjectName}-${DistributionBaseName}-${Environment}-${AWS::Region}'
 
   OriginBucketPolicy:
     Type: AWS::S3::BucketPolicy
