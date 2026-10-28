@@ -5,6 +5,7 @@ Description: 'Nested CloudFormation template to create a CloudFront distribution
 Parameters:
   ProjectName:
     Type: String
+    Default: "cfn-nested"
     Description: "Project name used as the prefix for the distribution name"
     MinLength: 1
     MaxLength: 20
@@ -19,6 +20,10 @@ Parameters:
   Environment:
     Type: String
     Default: devl
+    AllowedValues: 
+      - devl
+      - test
+      - prod
     Description: "Deployment environment for the CloudFront distribution"
 
   Description:

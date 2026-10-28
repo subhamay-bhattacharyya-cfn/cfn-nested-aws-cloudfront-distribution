@@ -1,5 +1,5 @@
 {
-  "ProjectName": "proj-ztc",
+  "ProjectName": "cfn-nested",
   "Environment": "devl",
   "OriginBucketRegion": "us-east-1"
 }
